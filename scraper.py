@@ -9,7 +9,7 @@ domain = "https://www.ag.gov.au"
 tovisit = Queue()
 visited = set()
 totalRequests = 0
-errordRequests = 0
+erroredRequests = 0
 
 def scrapePage(url):
 	global visited, tovisit, totalRequests, errorRequests
@@ -38,11 +38,13 @@ def scrapePage(url):
 
 		except requests.exceptions.RequestException as e:
 			print e
-			errorRequests+=1	
+			erroredRequests+=1
+			if erroredRequests > 5:
+				print "their website is probs down, hey"
 
 tovisit.put(domain)
 
-while not tovisit.empty() and errorRequests < 5:
+while not tovisit.empty() and erroredRequests <= 5:
 	scrapePage(tovisit.get())
 	tovisit.task_done()
 
