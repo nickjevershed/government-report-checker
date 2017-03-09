@@ -5,8 +5,10 @@ import requests
 import lxml.html
 import scraperwiki
 import random
+import codecs
 from Queue import Queue
 from datetime import datetime
+
 
 dateScraped = datetime.strftime(datetime.now(), '%Y-%m-%d')
 domain = "https://www.ag.gov.au"
@@ -18,15 +20,11 @@ totalRequests = 0
 erroredRequests = 0
 files = ['pdf','doc','docx','xls','xlxs','epub','rtf','txt','ppt','pptx','odt']
 
-
 if testing:
 	print "Testing mode, data won't be saved"
 
 if firstRun:
 	print "First run, generating initial database of documents"
-
-
-
 
 def checkDocType(url):
 	extension = url.split(".")[-1]
@@ -38,7 +36,7 @@ def checkDocType(url):
 def scrapePage(url):
 	global visited, tovisit, totalRequests, erroredRequests
 	if url not in visited:
-		print "getting",url
+		print "getting",url.encode('utf-8')
 		visited.add(url)
 		totalRequests+=1
 
@@ -81,12 +79,12 @@ def scrapePage(url):
 
 							# it has been updated, so save the new values in the main database table and the updates table
 
-							print data['url'], "has been updated"
+							print data['url'].encode('utf-8'), "has been updated"
 							if not testing:
 								scraperwiki.sqlite.save(unique_keys=["url","lastModified"], data=data, table_name="allDocuments")
 								scraperwiki.sqlite.save(unique_keys=["url","lastModified","dateScraped"], data=data, table_name="updatedDocuments")
 
-			# If not a doc, get the page and scrape the links into the queue 	
+			# If not a doc, get the page and scrape the links into the queue	
 
 			else:	
 				r = requests.get(url)	
@@ -110,14 +108,14 @@ def scrapePage(url):
 		except requests.exceptions.RequestException as e:
 			print e
 			erroredRequests+=1
-			if erroredRequests > 5:
+			if erroredRequests > 20:
 				print "their website is probs down, hey"
 
 # Start with the homepage
 
 tovisit.put(domain)
 
-while not tovisit.empty() and erroredRequests <= 5:
+while not tovisit.empty() and erroredRequests <= 20:
 	scrapePage(tovisit.get())
 	tovisit.task_done()
 
