@@ -48,7 +48,10 @@ def scrapePage(url):
 
 			if checkDocType(url):
 				r = requests.head(url)
-				lastModified = r.headers['last-modified']
+				if 'last-modified' in r.headers:
+					lastModified = r.headers['last-modified']
+				else:
+					lastModified = ""	
 				data = {}
 				data['fileName'] = url.split("/")[-1]
 				data['url'] = url
