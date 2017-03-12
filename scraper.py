@@ -60,7 +60,7 @@ def scrapePage(url):
 						scraperwiki.sqlite.save(unique_keys=["url","lastModified"], data=data, table_name="allDocuments")
 
 				elif firstRun == False:
-					queryString = "* from allDocuments where url='{url}'' and lastModified='{lastModified}'".format(url=url,lastModified=lastModified)
+					queryString = "* from allDocuments where url='{url}' and lastModified='{lastModified}'".format(url=url,lastModified=lastModified)
 					queryResult = scraperwiki.sqlite.select(queryString)
 
 					# if it hasn't been scraped before, save the data in the main table and the new docs table
