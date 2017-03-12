@@ -9,11 +9,10 @@ import codecs
 from Queue import Queue
 from datetime import datetime
 
-
 dateScraped = datetime.strftime(datetime.now(), '%Y-%m-%d')
 domain = "https://www.ag.gov.au"
 testing = False
-firstRun = True
+firstRun = False
 tovisit = Queue()
 visited = set()
 totalRequests = 0
