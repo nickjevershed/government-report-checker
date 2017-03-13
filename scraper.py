@@ -12,7 +12,7 @@ from datetime import datetime
 dateScraped = datetime.strftime(datetime.now(), '%Y-%m-%d')
 domain = "https://www.ag.gov.au"
 testing = False
-firstRun = False
+firstRun = True
 tovisit = Queue()
 visited = set()
 totalRequests = 0
@@ -48,22 +48,29 @@ def scrapePage(url):
 				if 'last-modified' in r.headers:
 					lastModified = r.headers['last-modified']
 				else:
-					lastModified = ""	
+					lastModified = ""
+
+				if 'content-length' in r.headers:
+					contentLength = r.headers['content-length']
+				else:
+					contentLength = ""
+
 				data = {}
 				data['fileName'] = url.split("/")[-1]
 				data['url'] = url
 				data['lastModified'] = lastModified
 				data['dateScraped'] = dateScraped
+				data['contentLength'] = contentLength
 
 				if firstRun == True:
 					if not testing:
 						scraperwiki.sqlite.save(unique_keys=["url","lastModified"], data=data, table_name="allDocuments")
 
 				elif firstRun == False:
-					queryString = u"* from allDocuments where url='{url}' and lastModified='{lastModified}'".format(url=url,lastModified=lastModified)
+					queryString = u"* from allDocuments where url='{url}'".format(url=url)
 					queryResult = scraperwiki.sqlite.select(queryString)
 
-					# if it hasn't been scraped before, save the data in the main table and the new docs table
+					# it hasn't been scraped before
 
 					if not queryResult:
 						print "new data, saving"
@@ -72,7 +79,7 @@ def scrapePage(url):
 							scraperwiki.sqlite.save(unique_keys=["url","lastModified","dateScraped"], data=data, table_name="newDocuments")
 
 					# if it has been saved before, check if it has been updated
-					
+
 					else:
 						if data['lastModified'] != queryResult[0]['lastModified']:
 
