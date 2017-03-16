@@ -19,6 +19,7 @@ dateScraped = datetime.strftime(datetime.now(), '%Y-%m-%d')
 parser = argparse.ArgumentParser()
 parser.add_argument("domain", help="The domain you want to monitor")
 parser.add_argument("--firstrun", help="If set will generate initial database, otherwise will check for new and modified documents", dest='firstrun', action='store_true')
+parser.add_argument("--verbose", help="makes it more verbose, obvs", dest='verbose', action='store_true')
 args = parser.parse_args()
 
 domain = args.domain
@@ -48,7 +49,8 @@ def checkDocType(url):
 def scrapePage(url):
 	global visited, tovisit, totalRequests, erroredRequests,updatedDocs,newDocs
 	if url not in visited:
-		# print "getting",url.encode('utf-8')
+		if verbose:
+			print "getting",url.encode('utf-8')
 		visited.add(url)
 		totalRequests+=1
 
@@ -58,6 +60,7 @@ def scrapePage(url):
 
 			if checkDocType(url):
 				r = requests.head(url)
+
 				if 'last-modified' in r.headers:
 					lastModified = r.headers['last-modified']
 				else:
