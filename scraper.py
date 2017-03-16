@@ -12,11 +12,18 @@ import smtplib
 from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 import os
+import argparse
 
 dateScraped = datetime.strftime(datetime.now(), '%Y-%m-%d')
-domain = "https://www.ag.gov.au"
+
+parser = argparse.ArgumentParser()
+parser.add_argument("domain", help="The domain you want to monitor")
+parser.add_argument("--firstrun", help="If set will generate initial database, otherwise will check for new and modified documents", dest='firstrun', action='store_true')
+args = parser.parse_args()
+
+domain = args.domain
 testing = False
-firstRun = False
+firstRun = args.firstrun
 newDocs = False
 updatedDocs = False
 tovisit = Queue()
