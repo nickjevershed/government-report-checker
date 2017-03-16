@@ -8,11 +8,17 @@ import random
 import codecs
 from Queue import Queue
 from datetime import datetime
+import smtplib
+from email.MIMEMultipart import MIMEMultipart
+from email.MIMEText import MIMEText
+import os
 
 dateScraped = datetime.strftime(datetime.now(), '%Y-%m-%d')
 domain = "https://www.ag.gov.au"
 testing = False
-firstRun = True
+firstRun = False
+newDocs = False
+updatedDocs = False
 tovisit = Queue()
 visited = set()
 totalRequests = 0
@@ -33,9 +39,9 @@ def checkDocType(url):
 		return False	
 
 def scrapePage(url):
-	global visited, tovisit, totalRequests, erroredRequests
+	global visited, tovisit, totalRequests, erroredRequests,updatedDocs,newDocs
 	if url not in visited:
-		print "getting",url.encode('utf-8')
+		# print "getting",url.encode('utf-8')
 		visited.add(url)
 		totalRequests+=1
 
@@ -74,9 +80,10 @@ def scrapePage(url):
 
 					if not queryResult:
 						print "new data, saving"
+						newDocs = True
 						if not testing:
-							scraperwiki.sqlite.save(unique_keys=["url","lastModified"], data=data, table_name="allDocuments")
-							scraperwiki.sqlite.save(unique_keys=["url","lastModified","dateScraped"], data=data, table_name="newDocuments")
+							scraperwiki.sqlite.save(unique_keys=["url"], data=data, table_name="allDocuments")
+							scraperwiki.sqlite.save(unique_keys=["url","dateScraped"], data=data, table_name="newDocuments")
 
 					# if it has been saved before, check if it has been updated
 
@@ -84,11 +91,11 @@ def scrapePage(url):
 						if data['lastModified'] != queryResult[0]['lastModified']:
 
 							# it has been updated, so save the new values in the main database table and the updates table
-
+							updatedDocs = True
 							print data['url'].encode('utf-8'), "has been updated"
 							if not testing:
-								scraperwiki.sqlite.save(unique_keys=["url","lastModified"], data=data, table_name="allDocuments")
-								scraperwiki.sqlite.save(unique_keys=["url","lastModified","dateScraped"], data=data, table_name="updatedDocuments")
+								scraperwiki.sqlite.save(unique_keys=["url"], data=data, table_name="allDocuments")
+								scraperwiki.sqlite.save(unique_keys=["url","dateScraped"], data=data, table_name="updatedDocuments")
 
 			# If not a doc, get the page and scrape the links into the queue	
 
@@ -112,6 +119,7 @@ def scrapePage(url):
 					tovisit.put(link)
 
 		except requests.exceptions.RequestException as e:
+			print "error on getting", url.encode('utf-8')
 			print e
 			erroredRequests+=1
 			if erroredRequests > 20:
@@ -121,9 +129,53 @@ def scrapePage(url):
 
 tovisit.put(domain)
 
+print "Running..."
+
 while not tovisit.empty() and erroredRequests <= 20:
 	scrapePage(tovisit.get())
 	tovisit.task_done()
 
-# some sort of email notifications to go here
+print "Done, checked {totalRequests} URLs".format(totalRequests=totalRequests)
+
+
+if newDocs:
+	queryString = "* from newDocuments where dateScraped='{dateScraped}'".format(dateScraped=dateScraped)
+	allNewDocs = scraperwiki.sqlite.select(queryString)
+	print len(allNewDocs)," new documents"
+
+if updatedDocs:
+	queryString = "* from updatedDocuments where dateScraped='{dateScraped}'".format(dateScraped=dateScraped)
+	allUpdatedDocs = scraperwiki.sqlite.select(queryString)
+	print len(allUpdatedDocs)," updated documents"
+
+# email notifications to go here
+
+EMAIL_ALERT_PASSWORD = os.environ['EMAIL_ALERT_PASSWORD']
+
+fromaddr = "alerts@nickevershed.com"
+toaddr = "nick.evershed@theguardian.com"
+ 
+msg = MIMEMultipart()
+ 
+msg['From'] = fromaddr
+msg['To'] = toaddr
+
+if not newDocs and not updatedDocs:
+	msg['Subject'] = "Report checker run, no new or updated documents"
+	body = "Done, checked {totalRequests} URLs".format(totalRequests=totalRequests)
+
+elif newDocs or updatedDocs:
+	msg['Subject'] = "Report checker run, there are new or updated documents"
+	body = "{numberNewDocs} new documents and {numberUpdatedDocs} updated documents".format(numberNewDocs=len(allNewDocs), numberUpdatedDocs=len(numberUpdatedDocs))
+
+
+msg.attach(MIMEText(body, 'plain'))
+ 
+server = smtplib.SMTP_SSL('mail.nickevershed.com', 465)
+server.login(fromaddr, EMAIL_ALERT_PASSWORD)
+text = msg.as_string()
+server.sendmail(fromaddr, toaddr, text)
+server.quit()
+
+print "Email sent"
 
