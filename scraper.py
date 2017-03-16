@@ -70,7 +70,7 @@ def scrapePage(url):
 
 				if firstRun == True:
 					if not testing:
-						scraperwiki.sqlite.save(unique_keys=["url","lastModified"], data=data, table_name="allDocuments")
+						scraperwiki.sqlite.save(unique_keys=["url"], data=data, table_name="allDocuments")
 
 				elif firstRun == False:
 					queryString = u"* from allDocuments where url='{url}'".format(url=url)
@@ -79,7 +79,7 @@ def scrapePage(url):
 					# it hasn't been scraped before
 
 					if not queryResult:
-						print "new data, saving"
+						print "new data, saving", data['url'].encode('utf-8')
 						newDocs = True
 						if not testing:
 							scraperwiki.sqlite.save(unique_keys=["url"], data=data, table_name="allDocuments")
@@ -88,14 +88,14 @@ def scrapePage(url):
 					# if it has been saved before, check if it has been updated
 
 					else:
-						if data['lastModified'] != queryResult[0]['lastModified']:
+						if data['contentLength'] != queryResult[0]['contentLength']:
 
 							# it has been updated, so save the new values in the main database table and the updates table
 							updatedDocs = True
 							print data['url'].encode('utf-8'), "has been updated"
 							if not testing:
 								scraperwiki.sqlite.save(unique_keys=["url"], data=data, table_name="allDocuments")
-								scraperwiki.sqlite.save(unique_keys=["url","dateScraped"], data=data, table_name="updatedDocuments")
+								scraperwiki.sqlite.save(unique_keys=["url","dateScraped","contentLength"], data=data, table_name="updatedDocuments")
 
 			# If not a doc, get the page and scrape the links into the queue	
 
