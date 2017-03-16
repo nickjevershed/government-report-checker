@@ -23,8 +23,9 @@ parser.add_argument("--verbose", help="makes it more verbose, obvs", dest='verbo
 args = parser.parse_args()
 
 domain = args.domain
-testing = False
 firstRun = args.firstrun
+verbose = args.verbose
+testing = False
 newDocs = False
 updatedDocs = False
 tovisit = Queue()
