@@ -47,6 +47,77 @@ def checkDocType(url):
 	else:
 		return False	
 
+def getDocInfo(url):
+
+	r = requests.head(url)
+
+	if 'last-modified' in r.headers:
+		lastModified = r.headers['last-modified']
+	else:
+		lastModified = ""
+
+	if 'content-length' in r.headers:
+		contentLength = r.headers['content-length']
+	else:
+		contentLength = ""
+
+	data = {}
+	data['fileName'] = url.split("/")[-1]
+	data['url'] = url
+	data['lastModified'] = lastModified
+	data['dateScraped'] = dateScraped
+	data['contentLength'] = contentLength
+	data['statusCode'] = r.status_code
+
+	if firstRun:
+		if not testing:
+			scraperwiki.sqlite.save(unique_keys=["url"], data=data, table_name="allDocuments")
+
+	else:
+		queryString = u"* from allDocuments where url='{url}'".format(url=url)
+		queryResult = scraperwiki.sqlite.select(queryString)
+
+		# it hasn't been scraped before
+
+		if not queryResult:
+			print "new data, saving", data['url'].encode('utf-8')
+			newDocs = True
+			if not testing:
+				scraperwiki.sqlite.save(unique_keys=["url"], data=data, table_name="allDocuments")
+				scraperwiki.sqlite.save(unique_keys=["url","dateScraped"], data=data, table_name="newDocuments")
+
+		# if it has been saved before, check if it has been updated
+
+		else:
+			if data['contentLength'] != queryResult[0]['contentLength']:
+
+				# it has been updated, so save the new values in the main database table and the updates table
+				updatedDocs = True
+				print data['url'].encode('utf-8'), "has been updated"
+				if not testing:
+					scraperwiki.sqlite.save(unique_keys=["url"], data=data, table_name="allDocuments")
+					scraperwiki.sqlite.save(unique_keys=["url","dateScraped","contentLength"], data=data, table_name="updatedDocuments")
+
+def getPageInfo(url):
+	r = requests.get(url)
+	if r.status_code != 404:	
+		dom = lxml.html.fromstring(r.content)
+		linksOnPage = dom.cssselect("a")
+		internalLinks = []
+
+		for link in linksOnPage:
+			if 'href' in link.attrib:
+				href = link.attrib['href']
+				
+				if href.startswith('http') and domain in href:
+					internalLinks.append(href)
+
+				elif href.startswith('/'):	
+					internalLinks.append(domain + href)
+
+		for link in set(internalLinks):
+			tovisit.put(link)
+
 def scrapePage(url):
 	global visited, tovisit, totalRequests, erroredRequests,updatedDocs,newDocs
 	if url not in visited:
@@ -56,78 +127,15 @@ def scrapePage(url):
 		totalRequests+=1
 
 		try:
-			
 			# Check if it's a doc, save it 
 
 			if checkDocType(url):
-				r = requests.head(url)
-
-				if 'last-modified' in r.headers:
-					lastModified = r.headers['last-modified']
-				else:
-					lastModified = ""
-
-				if 'content-length' in r.headers:
-					contentLength = r.headers['content-length']
-				else:
-					contentLength = ""
-
-				data = {}
-				data['fileName'] = url.split("/")[-1]
-				data['url'] = url
-				data['lastModified'] = lastModified
-				data['dateScraped'] = dateScraped
-				data['contentLength'] = contentLength
-
-				if firstRun == True:
-					if not testing:
-						scraperwiki.sqlite.save(unique_keys=["url"], data=data, table_name="allDocuments")
-
-				elif firstRun == False:
-					queryString = u"* from allDocuments where url='{url}'".format(url=url)
-					queryResult = scraperwiki.sqlite.select(queryString)
-
-					# it hasn't been scraped before
-
-					if not queryResult:
-						print "new data, saving", data['url'].encode('utf-8')
-						newDocs = True
-						if not testing:
-							scraperwiki.sqlite.save(unique_keys=["url"], data=data, table_name="allDocuments")
-							scraperwiki.sqlite.save(unique_keys=["url","dateScraped"], data=data, table_name="newDocuments")
-
-					# if it has been saved before, check if it has been updated
-
-					else:
-						if data['contentLength'] != queryResult[0]['contentLength']:
-
-							# it has been updated, so save the new values in the main database table and the updates table
-							updatedDocs = True
-							print data['url'].encode('utf-8'), "has been updated"
-							if not testing:
-								scraperwiki.sqlite.save(unique_keys=["url"], data=data, table_name="allDocuments")
-								scraperwiki.sqlite.save(unique_keys=["url","dateScraped","contentLength"], data=data, table_name="updatedDocuments")
+				getDocInfo(url)
 
 			# If not a doc, get the page and scrape the links into the queue	
 
 			else:	
-				r = requests.get(url)	
-				dom = lxml.html.fromstring(r.content)
-				linksOnPage = dom.cssselect("a")
-				internalLinks = []
-
-				for link in linksOnPage:
-					if 'href' in link.attrib:
-						href = link.attrib['href']
-						
-						if href.startswith('http') and domain in href:
-							internalLinks.append(href)
-
-						elif href.startswith('/'):	
-							internalLinks.append(domain + href)
-
-				for link in set(internalLinks):
-					tovisit.put(link)
+				getPageInfo(url)
 
 		except requests.exceptions.RequestException as e:
 			print "error on getting", url.encode('utf-8')
@@ -149,14 +157,19 @@ while not tovisit.empty() and erroredRequests <= 20:
 print "Done, checked {totalRequests} URLs".format(totalRequests=totalRequests)
 
 
+numberNewDocs = 0
+numberUpdatedDocs = 0
+
 if newDocs:
 	queryString = "* from newDocuments where dateScraped='{dateScraped}'".format(dateScraped=dateScraped)
 	allNewDocs = scraperwiki.sqlite.select(queryString)
+	numberNewDocs = len(allNewDocs)
 	print len(allNewDocs)," new documents"
 
 if updatedDocs:
 	queryString = "* from updatedDocuments where dateScraped='{dateScraped}'".format(dateScraped=dateScraped)
 	allUpdatedDocs = scraperwiki.sqlite.select(queryString)
+	numberUpdatedDocs = len(allUpdatedDocs)
 	print len(allUpdatedDocs)," updated documents"
 
 # email notifications to go here
@@ -172,12 +185,12 @@ msg['From'] = fromaddr
 msg['To'] = toaddr
 
 if not newDocs and not updatedDocs:
-	msg['Subject'] = "Report checker run, no new or updated documents"
+	msg['Subject'] = "Checked {domain}, no new or updated documents".format(domain=domain)
 	body = "Done, checked {totalRequests} URLs".format(totalRequests=totalRequests)
 
 elif newDocs or updatedDocs:
-	msg['Subject'] = "Report checker run, there are new or updated documents"
-	body = "{numberNewDocs} new documents and {numberUpdatedDocs} updated documents".format(numberNewDocs=len(allNewDocs), numberUpdatedDocs=len(numberUpdatedDocs))
+	msg['Subject'] = "Checked {domain}, there are new or updated documents".format(domain=domain)
+	body = "{numberNewDocs} new documents and {numberUpdatedDocs} updated documents".format(numberNewDocs=numberNewDocs, numberUpdatedDocs=numberUpdatedDocs)
 
 
 msg.attach(MIMEText(body, 'plain'))
