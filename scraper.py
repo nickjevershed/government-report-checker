@@ -177,12 +177,12 @@ if updatedDocs:
 EMAIL_ALERT_PASSWORD = os.environ['EMAIL_ALERT_PASSWORD']
 
 fromaddr = "alerts@nickevershed.com"
-toaddr = "nick.evershed@theguardian.com"
+recipients = ["nick.evershed@theguardian.com","paul.farrell@theguardian.com"]
  
 msg = MIMEMultipart()
  
 msg['From'] = fromaddr
-msg['To'] = toaddr
+msg['To'] = ", ".join(recipients)
 
 if not newDocs and not updatedDocs:
 	msg['Subject'] = "Checked {domain}, no new or updated documents".format(domain=domain)
@@ -190,15 +190,26 @@ if not newDocs and not updatedDocs:
 
 elif newDocs or updatedDocs:
 	msg['Subject'] = "Checked {domain}, there are new or updated documents".format(domain=domain)
-	body = "{numberNewDocs} new documents and {numberUpdatedDocs} updated documents".format(numberNewDocs=numberNewDocs, numberUpdatedDocs=numberUpdatedDocs)
+	body = "<p>{numberNewDocs} new documents and {numberUpdatedDocs} updated documents</p>".format(numberNewDocs=numberNewDocs, numberUpdatedDocs=numberUpdatedDocs)
+	if newDocs:
+		body += "<br><b>New documents:</b><br><ul>"
+		for doc in allNewDocs:
+			body += ("<li>" + doc['url'].encode('utf-8') + "</li>")
+		body += "</ul>"			
+
+	if updatedDocs:
+		body += "<br><b>Updated documents:</b><br><ul>"
+		for doc in allUpdatedDocs:
+			body += ("<li>" + doc['url'].encode('utf-8') + "</li>")
+		body += "</ul>"			
 
 
-msg.attach(MIMEText(body, 'plain'))
+msg.attach(MIMEText(body, 'html'))
  
 server = smtplib.SMTP_SSL('mail.nickevershed.com', 465)
 server.login(fromaddr, EMAIL_ALERT_PASSWORD)
 text = msg.as_string()
-server.sendmail(fromaddr, toaddr, text)
+server.sendmail(fromaddr, recipients, text)
 server.quit()
 
 print "Email sent"
