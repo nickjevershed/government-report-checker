@@ -142,17 +142,17 @@ def scrapePage(url):
 			if erroredRequests > 20:
 				print "their website is probs down, hey"
 
-# Start with the homepage
+Start with the homepage
 
-# tovisit.put(domain)
+tovisit.put(domain)
 
-# print "Running..."
+print "Running..."
 
-# while not tovisit.empty() and erroredRequests <= 20:
-# 	scrapePage(tovisit.get())
-# 	tovisit.task_done()
+while not tovisit.empty() and erroredRequests <= 20:
+	scrapePage(tovisit.get())
+	tovisit.task_done()
 
-# print "Done, checked {totalRequests} URLs".format(totalRequests=totalRequests)
+print "Done, checked {totalRequests} URLs".format(totalRequests=totalRequests)
 
 numberNewDocs = 0
 numberUpdatedDocs = 0
