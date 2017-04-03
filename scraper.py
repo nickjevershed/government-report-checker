@@ -15,6 +15,7 @@ import os
 import argparse
 
 dateScraped = datetime.strftime(datetime.now(), '%Y-%m-%d')
+print "dateScraped", dateScraped
 
 parser = argparse.ArgumentParser()
 parser.add_argument("domain", help="The domain you want to monitor")
@@ -26,8 +27,6 @@ domain = args.domain
 firstRun = args.firstrun
 verbose = args.verbose
 testing = False
-newDocs = False
-updatedDocs = False
 tovisit = Queue()
 visited = set()
 totalRequests = 0
@@ -81,7 +80,7 @@ def getDocInfo(url):
 
 		if not queryResult:
 			print "new data, saving", data['url'].encode('utf-8')
-			newDocs = True
+			
 			if not testing:
 				scraperwiki.sqlite.save(unique_keys=["url"], data=data, table_name="allDocuments")
 				scraperwiki.sqlite.save(unique_keys=["url","dateScraped"], data=data, table_name="newDocuments")
@@ -92,7 +91,6 @@ def getDocInfo(url):
 			if data['contentLength'] != queryResult[0]['contentLength']:
 
 				# it has been updated, so save the new values in the main database table and the updates table
-				updatedDocs = True
 				print data['url'].encode('utf-8'), "has been updated"
 				if not testing:
 					scraperwiki.sqlite.save(unique_keys=["url"], data=data, table_name="allDocuments")
@@ -146,31 +144,36 @@ def scrapePage(url):
 
 # Start with the homepage
 
-tovisit.put(domain)
+# tovisit.put(domain)
 
-print "Running..."
+# print "Running..."
 
-while not tovisit.empty() and erroredRequests <= 20:
-	scrapePage(tovisit.get())
-	tovisit.task_done()
+# while not tovisit.empty() and erroredRequests <= 20:
+# 	scrapePage(tovisit.get())
+# 	tovisit.task_done()
 
-print "Done, checked {totalRequests} URLs".format(totalRequests=totalRequests)
-
+# print "Done, checked {totalRequests} URLs".format(totalRequests=totalRequests)
 
 numberNewDocs = 0
 numberUpdatedDocs = 0
+newDocs = False
+updatedDocs = False
 
-if newDocs:
+if "newDocuments" in scraperwiki.sqlite.show_tables():
 	queryString = "* from newDocuments where dateScraped='{dateScraped}'".format(dateScraped=dateScraped)
 	allNewDocs = scraperwiki.sqlite.select(queryString)
-	numberNewDocs = len(allNewDocs)
-	print len(allNewDocs)," new documents"
+	if allNewDocs:
+		newDocs = True
+		numberNewDocs = len(allNewDocs)
+		print len(allNewDocs)," new documents"
 
-if updatedDocs:
+if "updatedDocuments" in scraperwiki.sqlite.show_tables():
 	queryString = "* from updatedDocuments where dateScraped='{dateScraped}'".format(dateScraped=dateScraped)
 	allUpdatedDocs = scraperwiki.sqlite.select(queryString)
-	numberUpdatedDocs = len(allUpdatedDocs)
-	print len(allUpdatedDocs)," updated documents"
+	if allUpdatedDocs:
+		updatedDocs = True
+		numberUpdatedDocs = len(allUpdatedDocs)
+		print len(allUpdatedDocs)," updated documents"
 
 # email notifications to go here
 
@@ -203,6 +206,9 @@ elif newDocs or updatedDocs:
 			body += ("<li>" + doc['url'].encode('utf-8') + "</li>")
 		body += "</ul>"			
 
+
+
+print body
 
 msg.attach(MIMEText(body, 'html'))
  
