@@ -142,7 +142,7 @@ def scrapePage(url):
 			if erroredRequests > 20:
 				print "their website is probs down, hey"
 
-Start with the homepage
+# Start with the homepage
 
 tovisit.put(domain)
 
