@@ -180,7 +180,7 @@ if "updatedDocuments" in scraperwiki.sqlite.show_tables():
 EMAIL_ALERT_PASSWORD = os.environ['EMAIL_ALERT_PASSWORD']
 
 fromaddr = "alerts@nickevershed.com"
-recipients = ["nick.evershed@theguardian.com","paul.farrell@theguardian.com"]
+recipients = ["nick.evershed@theguardian.com"]
  
 msg = MIMEMultipart()
  
