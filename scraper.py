@@ -98,24 +98,27 @@ def getDocInfo(url):
 
 def getPageInfo(url):
 	r = requests.get(url)
-	if r.status_code != 404:	
-		dom = lxml.html.fromstring(r.content)
-		linksOnPage = dom.cssselect("a")
-		internalLinks = []
+	if r.status_code != 404:
+		try:	
+			dom = lxml.html.fromstring(r.content)
+			linksOnPage = dom.cssselect("a")
+			internalLinks = []
 
-		for link in linksOnPage:
-			if 'href' in link.attrib:
-				href = link.attrib['href']
-				
-				if href.startswith('http') and domain in href:
-					internalLinks.append(href)
+			for link in linksOnPage:
+				if 'href' in link.attrib:
+					href = link.attrib['href']
+					
+					if href.startswith('http') and domain in href:
+						internalLinks.append(href)
 
-				elif href.startswith('/'):	
-					internalLinks.append(domain + href)
+					elif href.startswith('/'):	
+						internalLinks.append(domain + href)
 
-		for link in set(internalLinks):
-			tovisit.put(link)
-
+			for link in set(internalLinks):
+				tovisit.put(link)
+		except Exception, e:
+				print e
+						
 def scrapePage(url):
 	global visited, tovisit, totalRequests, erroredRequests,updatedDocs,newDocs
 	if url not in visited:
