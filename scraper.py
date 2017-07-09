@@ -73,7 +73,7 @@ def getDocInfo(url):
 			scraperwiki.sqlite.save(unique_keys=["url"], data=data, table_name="allDocuments")
 
 	else:
-		queryString = u"* from allDocuments where url='{url}'".format(url=url)
+		queryString = u"* from allDocuments where url='{url}'".format(url=url.replace("'","''"))
 		queryResult = scraperwiki.sqlite.select(queryString)
 
 		# it hasn't been scraped before
