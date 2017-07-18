@@ -62,7 +62,7 @@ def getDocInfo(url):
 
 	data = {}
 	data['fileName'] = url.split("/")[-1]
-	data['url'] = url
+	data['url'] = url.replace("'","''")
 	data['lastModified'] = lastModified
 	data['dateScraped'] = dateScraped
 	data['contentLength'] = contentLength
@@ -173,6 +173,7 @@ if "newDocuments" in scraperwiki.sqlite.show_tables():
 if "updatedDocuments" in scraperwiki.sqlite.show_tables():
 	queryString = "* from updatedDocuments where dateScraped='{dateScraped}'".format(dateScraped=dateScraped)
 	allUpdatedDocs = scraperwiki.sqlite.select(queryString)
+	print allUpdatedDocs
 	if allUpdatedDocs:
 		updatedDocs = True
 		numberUpdatedDocs = len(allUpdatedDocs)
